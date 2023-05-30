@@ -19,6 +19,8 @@
         <div class="card-header py-3">
             <p class="text-primary m-0 fw-bold" id="modeLabel">mode: {{ mode }}</p>
             <button id="modeButton" class="btn btn-primary">Switch to {% if mode == 'auto' %}manual {%else%} auto{% endif %}</button>
+            <p class="text-primary m-0 fw-bold" id="detectLabel">detect: {% if detect %}có người{% else %}không có người{% endif %}</p>
+
         </div>
         <div class="card-body">
             <div class="table-responsive table mt-2" id="dataTable" role="grid" aria-describedby="dataTable_info">
@@ -49,6 +51,7 @@
 <script>
     const modeLabel = document.getElementById('modeLabel');
     const modeButton = document.getElementById('modeButton');
+    const detectLabel = document.getElementById('detectLabel');
 
     // Attach event listener to the mode button
     modeButton.addEventListener('click', toggleMode);
@@ -122,6 +125,7 @@
             .then(data => {
                 modeLabel.textContent = `mode: ${data.mode}`;
                 modeButton.textContent = data.mode === 'auto' ? 'Switch to Manual' : 'Switch to Auto';
+                detectLabel.textContent = `detect: ${data.detect ? 'có người' : 'không có người'}`;
                 // Update the table content with the updated data
                 const tableBody = document.querySelector('#dataTable tbody');
                 tableBody.innerHTML = '';

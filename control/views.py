@@ -21,6 +21,7 @@ database = app.database()
 def table(request):
     devices= dict(database.child("device").get().val())
     auto= database.child("auto").get().val()
+    detect= database.child("detect").get().val()
     if auto == 1:
         auto = "auto"
     else:
@@ -28,6 +29,7 @@ def table(request):
     context={
         'devices':devices,
         'mode':auto,
+        'detect':detect,
     }
     print(devices)
     return render(request, 'deviceTable.html',context)
@@ -62,6 +64,7 @@ def fetch_data(request):
     # Retrieve the updated data from the database or any other source
     devices= dict(database.child("device").get().val())
     auto= database.child("auto").get().val()
+    detect= database.child("detect").get().val()
     if auto == 1:
         auto = "auto"
     else:
@@ -71,6 +74,7 @@ def fetch_data(request):
     data = {
         'devices': devices,
         'mode': auto,
+        'detect':detect,
     }
 
     return JsonResponse(data)
