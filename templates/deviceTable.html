@@ -1,0 +1,147 @@
+{% csrf_token %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'assets/bootstrap/css/bootstrap.min.css' %} ">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
+    <link rel="stylesheet" href="{%static 'assets/css/styles.min.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{%static 'assets/js/script.min.js' %}"></script>
+</head>
+<div class="container-fluid">
+    <h3 class="text-dark mb-4">Device table</h3>
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <p class="text-primary m-0 fw-bold" id="modeLabel">mode: {{ mode }}</p>
+            <button id="modeButton" class="btn btn-primary">Switch to {% if mode == 'auto' %}manual {%else%} auto{% endif %}</button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive table mt-2" id="dataTable" role="grid" aria-describedby="dataTable_info">
+                <table class="table my-0" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>device</th>
+                            <th>status</th>
+                            <th>Switch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, value in devices.items %}
+                        <tr>
+                            <td>{{ key }}</td>
+                            <td id="status-{{ key }}">{{ value }}</td>
+                            <td>
+                                <input type="range" min="0" max="90" id="switch-{{ key }}" value="{{ value }}" step="10" onchange="updateStatus('{{ key }}', this.value)" {% if mode == 'auto' %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const modeLabel = document.getElementById('modeLabel');
+    const modeButton = document.getElementById('modeButton');
+
+    // Attach event listener to the mode button
+    modeButton.addEventListener('click', toggleMode);
+
+    function toggleMode() {
+        const currentMode = modeLabel.textContent;
+
+        // Update the mode label and button text accordingly
+        if (currentMode === 'mode: auto') {
+            modeLabel.textContent = 'mode: manual';
+            modeButton.textContent = 'Switch to Auto';
+
+            // Enable all switch inputs
+            const switches = document.querySelectorAll('input[type="range"]');
+            switches.forEach((switchInput) => {
+                switchInput.disabled = false;
+            });
+        } else {
+            modeLabel.textContent = 'mode: auto';
+            modeButton.textContent = 'Switch to Manual';
+
+            // Disable all switch inputs
+            const switches = document.querySelectorAll('input[type="range"]');
+            switches.forEach((switchInput) => {
+                switchInput.disabled = true;
+            });
+        }
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const url = '/update-mode/';
+
+        const data = JSON.stringify({
+            newMode: currentMode === 'mode: auto' ? 'manual' : 'auto',
+        });
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        xhr.send(data);
+    }
+    function updateStatus(deviceKey, newStatus) {
+        // Send AJAX request to Django server
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const url = '/update-status/';
+
+        const data = JSON.stringify({
+            'deviceKey': deviceKey,
+            'newStatus': newStatus,
+        });
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                // Update the status value in the table cell
+                const statusCell = document.getElementById('status-' + deviceKey);
+                statusCell.textContent = newStatus;
+            }
+        }; 
+        xhr.send(data);
+    }
+    // Refresh the table every  seconds
+    setInterval(refreshTable, 1000);
+
+    function refreshTable() {
+        // Fetch the updated data from the server
+        fetch('/fetch-data/')
+            .then(response => response.json())
+            .then(data => {
+                modeLabel.textContent = `mode: ${data.mode}`;
+                modeButton.textContent = data.mode === 'auto' ? 'Switch to Manual' : 'Switch to Auto';
+                // Update the table content with the updated data
+                const tableBody = document.querySelector('#dataTable tbody');
+                tableBody.innerHTML = '';
+
+                for (const [key, value] of Object.entries(data.devices)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${key}</td>
+                        <td id="status-${key}">${value}</td>
+                        <td>
+                            <input type="range" id="switch-${key}" min="0" max="90" value="${value}" step="10" onchange="updateStatus('${key}', this.value)" ${data.mode === 'auto' ? 'disabled' : ''}>
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+                }
+
+                // Update the mode label and button text
+                modeLabel.textContent = `mode: ${data.mode}`;
+                modeButton.textContent = data.mode === 'auto' ? 'Switch to Manual' : 'Switch to Auto';
+            });
+    }
+</script>
